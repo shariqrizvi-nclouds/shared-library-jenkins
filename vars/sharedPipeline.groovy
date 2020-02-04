@@ -13,7 +13,7 @@ def isStartedByTimer() {
 
 
 def call(){
-    String cron_string = "H/5 * * * *"
+    String cron_string = "* * * * *"
     def scm = "${isStartedByTimer()}"
     commit = ""
 
