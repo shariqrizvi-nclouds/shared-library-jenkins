@@ -130,23 +130,13 @@ def call(){
                             expression {
                                 "${scm}" == "true"
                             }
-
-                            allOf {
-                                expression {
-                                    params.GIT_REV == ""
-                                }
-                                anyOf {
-                                    expression {
-                                        params.OPTION == "deploy"
-                                    }
-                                    expression {
-                                        params.OPTION == "build"
-                                    }
-                                }
+                            expression {
+                                params.OPTION == "deploy"
                             }
-
                         }
                     }
+
+
                 }
 
                 steps {
