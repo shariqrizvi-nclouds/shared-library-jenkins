@@ -90,7 +90,7 @@ def call(){
                 }
             }
 
-            stage('test') {
+            stage('Test') {
                 when {
                     anyOf {
                         expression {
@@ -116,11 +116,13 @@ def call(){
 
             stage('Vulnerability Scanner') {
                 steps {
-                    script {
-                        echo "Startin image vulneratbility scan on ECR"
-                        sh "aws ecr start-image-scan --repository-name ${ECR_REPO_NAME} --image-id imageTag=${commit} --region ${AWS_REGION}|| true"
-                        sh "aws ecr wait image-scan-complete --repository-name ${ECR_REPO_NAME} --image-id imageTag=${commit} --region ${AWS_REGION}"
-                        sh "aws ecr describe-image-scan-findings --repository-name ${ECR_REPO_NAME} --image-id imageTag=${commit} --region ${AWS_REGION}"
+                    container('docker') {	
+                        script {
+                            echo "Startin image vulneratbility scan on ECR"
+                            sh "aws ecr start-image-scan --repository-name ${ECR_REPO_NAME} --image-id imageTag=${commit} --region ${AWS_REGION}|| true"
+                            sh "aws ecr wait image-scan-complete --repository-name ${ECR_REPO_NAME} --image-id imageTag=${commit} --region ${AWS_REGION}"
+                            sh "aws ecr describe-image-scan-findings --repository-name ${ECR_REPO_NAME} --image-id imageTag=${commit} --region ${AWS_REGION}"
+                        }
                     }
                 }
             }
