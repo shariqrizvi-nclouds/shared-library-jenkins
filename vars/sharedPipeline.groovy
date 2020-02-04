@@ -25,7 +25,7 @@ def call(){
             string(name: 'ECR_REPO', defaultValue: '695292474035.dkr.ecr.us-east-1.amazonaws.com/nclouds-eks-nodejs')
             string(name: 'DEPLOYMENT_NAME', defaultValue: 'ecsdemo-nodejs')
             string(name: 'DOCKER_TAG_NAME', defaultValue: 'nclouds-eks-nodejs')
-            choice(name: 'OPTION', choices: ['test', 'build', 'add-artifacts', 'deploy', 're-deploy'])
+            string(name: 'OPTION', defaultValue: 'deploy')
         }
 
 
