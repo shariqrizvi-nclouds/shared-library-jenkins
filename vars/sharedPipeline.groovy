@@ -24,8 +24,8 @@ def call(){
             string(name: 'EKS_DEV_CLUSTER', defaultValue: 'nclouds-eks-dev', description: 'The name of the eks cluster')
             string(name: 'AWS_REGION', defaultValue: 'us-east-1')
             string(name: 'ECR_REPO', defaultValue: '695292474035.dkr.ecr.us-east-1.amazonaws.com/nclouds-eks-nodejs')
+            string(name: 'ECR_REPO_NAME', defaultValue: 'nclouds-eks-nodejs')
             string(name: 'DEPLOYMENT_NAME', defaultValue: 'ecsdemo-nodejs')
-            string(name: 'DOCKER_TAG_NAME', defaultValue: 'nclouds-eks-nodejs')
             string(name: 'OPTION', defaultValue: 'deploy')
         }
 
@@ -55,31 +55,52 @@ def call(){
                 }
             }
 
+            stage('Linting'){
+                echo 'Linting Docker image with Hadolint...'
+                // sh 'docker run --rm -i hadolint/hadolint hadolint - < Dockerfile'
+            }
+            
+            stage('Build') {
+                when {
+                    anyOf {
+                        expression {
+                            "${scm}" == "true"
+                        }
+                        expression {
+                            params.OPTION == "deploy"
+                        }
+                    }
+                }
+                steps {
+                    container('docker') {	
+                        script {	
+                            sh "docker build -t ${ECR_REPO_NAME} --network=host ."
+                            sh "\$(aws ecr get-login --no-include-email --region ${AWS_REGION})"	
+                            sh "docker tag ${ECR_REPO_NAME} ${ECR_REPO}:${commit}"
+                            sh "docker tag ${ECR_REPO_NAME} ${ECR_REPO}:latest"
+                            sh "docker push ${ECR_REPO}:${commit}"
+                            sh "docker push ${ECR_REPO}:latest"
+                            sh 'echo "Stage push done"'
+                        }
+                    }
+                }
+            }
+
             stage('test') {
                 when {
-                    allOf {
-                        not {
-                            expression {
-                                params.OPTION == "re-deploy"
-                            }
+                    anyOf {
+                        expression {
+                            "${scm}" == "true"
                         }
-                    
-                        anyOf {
-                            expression {
-                                "${scm}" == "true"
-                            }
-                            not {
-                                allOf {
-                                    expression {
-                                        params.GIT_REV != ""
-                                    }
-                                    expression {
-                                        params.OPTION == "deploy"
-                                    }
+                        not {
+                            allOf {
+                                expression {
+                                    params.GIT_REV != ""
+                                }
+                                expression {
+                                    params.OPTION == "deploy"
                                 }
                             }
-
-
                         }
                     }
 
@@ -89,88 +110,23 @@ def call(){
                 }
             }
 
-	        stage('Vulnerability Scanner') {
-                steps {
-                    sh 'echo "Vulnerability Scanning done"'
-                }
+            stage('Vulnerability Scanner') {
+                echo "Startin image vulneratbility scan on ECR"
+                sh "aws ecr start-image-scan --repository-name ${ECR_REPO_NAME} --image-id imageTag=${commit} --region ${AWS_REGION}|| true"
+                sh "aws ecr wait image-scan-complete --repository-name ${ECR_REPO_NAME} --image-id imageTag=${commit} --region ${AWS_REGION}"
+                sh "aws ecr describe-image-scan-findings --repository-name ${ECR_REPO_NAME} --image-id imageTag=${commit} --region ${AWS_REGION}"
             }
 
-            stage('push') {
+            stage('Dev Deployment') {
                 when {
-                    allOf {
-                        not {
-                            expression {
-                                params.OPTION == "re-deploy"
-                            }
+                    anyOf {
+                        expression {
+                            "${scm}" == "true"
                         }
-                    
-                        anyOf {
-                            expression {
-                                "${scm}" == "true"
-                            }
-                            expression {
-                                params.OPTION == "deploy"
-                            }
+                        expression {
+                            params.OPTION == "deploy"
                         }
                     }
-
-
-                }
-
-                steps {
-                    container('docker') {	
-                        script {	
-                            sh "docker build -t ${DOCKER_TAG_NAME} --network=host ."
-                            sh "\$(aws ecr get-login --no-include-email --region ${AWS_REGION})"	
-                            sh "docker tag ${DOCKER_TAG_NAME} ${ECR_REPO}:${commit}"
-                            sh "docker tag ${DOCKER_TAG_NAME} ${ECR_REPO}:latest"
-                            sh "docker push ${ECR_REPO}:${commit}"
-                            sh "docker push ${ECR_REPO}:latest"
-                            sh 'echo "Stage push done"'
-                        }
-                    }
-                }
-            }
-            
-
-
-            stage('add-artifacts'){
-                when {
-                    expression {
-                        params.OPTION == "deploy"
-                    }
-                }
-                steps{
-                    script {
-                        sh 'echo "Stage re-deploy done"'
-
-                    }
-                    
-                }
-            }
-
-
-
-            stage('deploy-dev') {
-                when {
-                    allOf {
-                        not {
-                            expression {
-                                params.OPTION == "re-deploy"
-                            }
-                        }
-                    
-                        anyOf {
-                            expression {
-                                "${scm}" == "true"
-                            }
-                            expression {
-                                params.OPTION == "deploy"
-                            }
-                        }
-                    }
-
-
                 }
                 steps {
                     // error('failed')
@@ -191,45 +147,16 @@ def call(){
                 
             }
 
-            stage('re-deploy-dev'){
-                when {
-                    expression {
-                        params.OPTION == "re-deploy"
-                    }
-                }
-                steps{
-                    script {
-                        
-                        String jsonString = """{"spec":{"template":{"metadata":{"labels":{"date":"${currentBuild.startTimeInMillis}"}}}}}"""
-                        writeFile(file:'message2.json', text: jsonString)
-                        sh 'cat message2.json'
-                        sh 'echo "Stage re-deploy done"'
-
-                    }
-                    
-                }
-            }
-
-            stage('Check for deployment'){
-                when {
-                    allOf {
-                        not {
-                            expression {
-                                params.OPTION == "re-deploy"
-                            }
+            stage('Approval'){
+                when {      
+                    anyOf {
+                        expression {
+                            "${scm}" == "true"
                         }
-                    
-                        anyOf {
-                            expression {
-                                "${scm}" == "true"
-                            }
-                            expression {
-                                params.OPTION == "deploy"
-                            }
+                        expression {
+                            params.OPTION == "deploy"
                         }
                     }
-
-
                 }
                 steps {
                     script{
