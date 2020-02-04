@@ -56,10 +56,14 @@ def call(){
             }
 
             stage('Linting'){
-                echo 'Linting Docker image with Hadolint...'
-                // sh 'docker run --rm -i hadolint/hadolint hadolint - < Dockerfile'
+                steps {
+                    script {
+                        echo 'Linting Docker image with Hadolint...'
+                        // sh 'docker run --rm -i hadolint/hadolint hadolint - < Dockerfile'
+                    }
+                }
             }
-            
+
             stage('Build') {
                 when {
                     anyOf {
@@ -111,10 +115,14 @@ def call(){
             }
 
             stage('Vulnerability Scanner') {
-                echo "Startin image vulneratbility scan on ECR"
-                sh "aws ecr start-image-scan --repository-name ${ECR_REPO_NAME} --image-id imageTag=${commit} --region ${AWS_REGION}|| true"
-                sh "aws ecr wait image-scan-complete --repository-name ${ECR_REPO_NAME} --image-id imageTag=${commit} --region ${AWS_REGION}"
-                sh "aws ecr describe-image-scan-findings --repository-name ${ECR_REPO_NAME} --image-id imageTag=${commit} --region ${AWS_REGION}"
+                steps {
+                    script {
+                        echo "Startin image vulneratbility scan on ECR"
+                        sh "aws ecr start-image-scan --repository-name ${ECR_REPO_NAME} --image-id imageTag=${commit} --region ${AWS_REGION}|| true"
+                        sh "aws ecr wait image-scan-complete --repository-name ${ECR_REPO_NAME} --image-id imageTag=${commit} --region ${AWS_REGION}"
+                        sh "aws ecr describe-image-scan-findings --repository-name ${ECR_REPO_NAME} --image-id imageTag=${commit} --region ${AWS_REGION}"
+                    }
+                }
             }
 
             stage('Dev Deployment') {
