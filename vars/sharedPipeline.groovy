@@ -235,7 +235,6 @@ def call(){
                 }
             }
 
-            def userInput = true
             stage('Check for deployment'){
                 when {
                     allOf {
@@ -258,8 +257,9 @@ def call(){
 
                 }
                 steps {
-                    def IsTimeout = false
                     script{
+                        def IsTimeout = false
+                        def userInput = true
                         try {
                             timeout(time: 300, unit: 'SECONDS') {
                                 userInput = input(
