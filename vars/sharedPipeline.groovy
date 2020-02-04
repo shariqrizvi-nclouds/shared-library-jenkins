@@ -144,9 +144,7 @@ def call(){
                         script {	
                             sh "\$(aws ecr get-login --no-include-email --region ${AWS_REGION})"	
                             sh "docker tag ${DOCKER_TAG_NAME} ${ECR_REPO}:${commit}"
-                            sh "docker tag ${DOCKER_TAG_NAME} ${ECR_REPO}:latest"
                             sh "docker push ${ECR_REPO}:${commit}"
-                            sh "docker push ${ECR_REPO}:latest"
                             sh 'echo "Stage push done"'
                         }
                     }
