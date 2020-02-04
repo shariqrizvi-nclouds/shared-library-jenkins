@@ -149,6 +149,7 @@ def call(){
                             sh "docker push ${ECR_REPO}:latest"
                             sh 'echo "Stage push done"'
                         }
+                    }
                 }
             }
             
