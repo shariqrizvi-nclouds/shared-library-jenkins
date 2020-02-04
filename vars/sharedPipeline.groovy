@@ -20,13 +20,13 @@ def call(){
     pipeline {
         agent any
         parameters {
-            string(name: 'EKS_PROD_CLUSTER', defaultValue: 'nclouds-eks-prod', description: 'The name of the eks prod cluster')
-            string(name: 'EKS_DEV_CLUSTER', defaultValue: 'nclouds-eks-dev', description: 'The name of the eks cluster')
-            string(name: 'AWS_REGION', defaultValue: 'us-east-1')
-            string(name: 'ECR_REPO', defaultValue: '695292474035.dkr.ecr.us-east-1.amazonaws.com/nclouds-eks-nodejs')
-            string(name: 'ECR_REPO_NAME', defaultValue: 'nclouds-eks-nodejs')
-            string(name: 'DEPLOYMENT_NAME', defaultValue: 'ecsdemo-nodejs')
-            string(name: 'OPTION', defaultValue: 'deploy')
+            string(name: 'EKS_PROD_CLUSTER', description: 'The name of the eks prod cluster')
+            string(name: 'EKS_DEV_CLUSTER', description: 'The name of the eks dev cluster')
+            string(name: 'AWS_REGION', description: 'region to be deployed')
+            string(name: 'ECR_REPO', description: 'Full ECR repo base image uri')
+            string(name: 'ECR_REPO_NAME', description: 'ECR repo name')
+            string(name: 'DEPLOYMENT_NAME', description: 'Deployment name in Kubernetes Deployment File')
+            choice(name: 'OPTION', choices: ['build', 'test', 'dev-deploy', 'prod-deploy'])
         }
 
 
@@ -40,14 +40,6 @@ def call(){
         stages {
 
             stage('Checkout') {
-                when{
-                    not {
-                        expression {
-                            params.OPTION == "re-deploy"
-                        }
-                    }
-                }
-                
                 steps {
                     script {
                         commit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
@@ -90,30 +82,6 @@ def call(){
                 }
             }
 
-            stage('Test') {
-                when {
-                    anyOf {
-                        expression {
-                            "${scm}" == "true"
-                        }
-                        not {
-                            allOf {
-                                expression {
-                                    params.GIT_REV != ""
-                                }
-                                expression {
-                                    params.OPTION == "deploy"
-                                }
-                            }
-                        }
-                    }
-
-                }
-                steps {
-                    sh 'echo "Stage test done"'
-                }
-            }
-
             stage('Vulnerability Scanner') {
                 steps {
                     container('docker') {	
@@ -127,14 +95,35 @@ def call(){
                 }
             }
 
+            stage('Test') {
+                when {
+                    anyOf {
+                        expression {
+                            params.OPTION == "test"
+                        }
+                        expression {
+                            params.OPTION == "dev-deploy"
+                        }
+                        expression {
+                            params.OPTION == "prod-deploy"
+                        }
+                    }
+                }
+
+                }
+                steps {
+                    sh 'echo "Stage test done"'
+                }
+            }
+
             stage('Dev Deployment') {
                 when {
                     anyOf {
                         expression {
-                            "${scm}" == "true"
+                            params.OPTION == "dev-deploy"
                         }
                         expression {
-                            params.OPTION == "deploy"
+                            params.OPTION == "prod-deploy"
                         }
                     }
                 }
@@ -158,14 +147,9 @@ def call(){
             }
 
             stage('Approval'){
-                when {      
-                    anyOf {
-                        expression {
-                            "${scm}" == "true"
-                        }
-                        expression {
-                            params.OPTION == "deploy"
-                        }
+                when {
+                    expression {
+                        params.OPTION == "prod-deploy"
                     }
                 }
                 steps {
