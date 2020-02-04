@@ -15,6 +15,7 @@ def isStartedByTimer() {
 def call(){
     String cron_string = "H/5 * * * *"
     def scm = "${isStartedByTimer()}"
+    commit = ""
 
     pipeline {
         agent any
@@ -51,6 +52,7 @@ def call(){
                     script {
                         echo "Hello Wordld"
                         echo "${scm}"
+                        commit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
                     }
                 }
             }
