@@ -287,7 +287,7 @@ def call(){
 
                                         echo "$data"
 
-                                        curl -X POST -H 'Content-type: application/json' --data "$data" https://hooks.slack.com/services/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
+                                        sh "curl -X POST -H 'Content-type: application/json' --data "$data" https://hooks.slack.com/services/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"
                                                                             }
                                 }
                             }
