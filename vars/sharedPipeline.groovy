@@ -13,7 +13,7 @@ def isStartedByTimer() {
 
 
 def call(){
-    String cron_string = BRANCH_NAME == "master" ? "* * * * *" : ""
+    String cron_string = "* * * * *"
     def scm = "${isStartedByTimer()}"
 
     pipeline {
