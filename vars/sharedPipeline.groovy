@@ -235,53 +235,51 @@ def call(){
                 }
             }
 
-            node{
-                def userInput = true
-                stage('Check for deployment'){
-                    when {
-                        allOf {
-                            not {
-                                expression {
-                                    params.OPTION == "re-deploy"
-                                }
-                            }
-                        
-                            anyOf {
-                                expression {
-                                    "${scm}" == "true"
-                                }
-                                expression {
-                                    params.OPTION == "deploy"
-                                }
+            def userInput = true
+            stage('Check for deployment'){
+                when {
+                    allOf {
+                        not {
+                            expression {
+                                params.OPTION == "re-deploy"
                             }
                         }
-
-
-                    }
-                    steps {
-                        def IsTimeout = false
-                        script{
-                            try {
-                                timeout(time: 300, unit: 'SECONDS') {
-                                    userInput = input(
-                                    id: 'userInput', message: 'Deploy to Prod?', parameters: [
-                                        [$class: 'BooleanParameterDefinition', defaultValue: true, description: 'Deploy to Production?', name: 'PROD']
-                                    ]);
-                                }
-                            } 
-                            catch(err) { // timeout reached or input false
-                                userInput = false
+                    
+                        anyOf {
+                            expression {
+                                "${scm}" == "true"
                             }
+                            expression {
+                                params.OPTION == "deploy"
+                            }
+                        }
+                    }
 
-                            if (userInput == true) {
-                                stage('Prod Deployment') {
 
-                                    container('docker') {
-                                        script {
-                                            sh "echo deploying to prod..."
-                                            sh "aws eks update-kubeconfig --name ${EKS_PROD_CLUSTER} --region ${AWS_REGION}"
-                                            sh "kubectl set image deployment/${DEPLOYMENT_NAME} ${DEPLOYMENT_NAME}=${ECR_REPO}:${commit} --record"
-                                        }
+                }
+                steps {
+                    def IsTimeout = false
+                    script{
+                        try {
+                            timeout(time: 300, unit: 'SECONDS') {
+                                userInput = input(
+                                id: 'userInput', message: 'Deploy to Prod?', parameters: [
+                                    [$class: 'BooleanParameterDefinition', defaultValue: true, description: 'Deploy to Production?', name: 'PROD']
+                                ]);
+                            }
+                        } 
+                        catch(err) { // timeout reached or input false
+                            userInput = false
+                        }
+
+                        if (userInput == true) {
+                            stage('Prod Deployment') {
+
+                                container('docker') {
+                                    script {
+                                        sh "echo deploying to prod..."
+                                        sh "aws eks update-kubeconfig --name ${EKS_PROD_CLUSTER} --region ${AWS_REGION}"
+                                        sh "kubectl set image deployment/${DEPLOYMENT_NAME} ${DEPLOYMENT_NAME}=${ECR_REPO}:${commit} --record"
                                     }
                                 }
                             }
