@@ -50,8 +50,7 @@ def call(){
                 
                 steps {
                     script {
-                        echo "Hello Wordld"
-                        echo "${scm}"
+                        git url: 'https://github.com/nclouds/demo-nodejs.git', branch: 'master'
                         commit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
                     }
                 }
