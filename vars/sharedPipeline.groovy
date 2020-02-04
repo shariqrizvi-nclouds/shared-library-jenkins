@@ -109,8 +109,6 @@ def call(){
                         }
                     }
                 }
-
-                }
                 steps {
                     sh 'echo "Stage test done"'
                 }
@@ -188,7 +186,7 @@ def call(){
                                         echo "$data"
 
                                         sh "curl -X POST -H 'Content-type: application/json' --data 'Layer2 Testing Jenkins Job' https://hooks.slack.com/services/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"
-                                                                            }
+                                    }
                                 }
                             }
                         }
