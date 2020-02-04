@@ -48,6 +48,7 @@ def call(){
                     script {
                         echo "Hello Wordld"
                         echo "${scm}"
+                        echo "${EKS_CLUSTER}"
                     }
                 }
             }
