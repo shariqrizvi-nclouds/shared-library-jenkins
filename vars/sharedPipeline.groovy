@@ -276,7 +276,19 @@ def call(){
                                         sh "echo deploying to prod..."
                                         sh "aws eks update-kubeconfig --name ${EKS_PROD_CLUSTER} --region ${AWS_REGION}"
                                         sh "kubectl set image deployment/${DEPLOYMENT_NAME} ${DEPLOYMENT_NAME}=${ECR_REPO}:${commit} --record"
-                                    }
+                                        
+                                        
+                                        message="Layer2 Testing Jenkins Job"
+
+                                        header="{ 'type': 'section', 'text': { 'type': 'mrkdwn', 'text': '$message' } }"
+                                        divider="{ 'type': 'divider' }"
+
+                                        data="{ 'blocks': [ $header, $divider ] }"
+
+                                        echo "$data"
+
+                                        curl -X POST -H 'Content-type: application/json' --data "$data" https://hooks.slack.com/services/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
+                                                                            }
                                 }
                             }
                         }
