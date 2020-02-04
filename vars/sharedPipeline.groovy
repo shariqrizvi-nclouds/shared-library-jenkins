@@ -13,25 +13,28 @@ def isStartedByTimer() {
 
 
 def call(){
-    String cron_string = "* * * * *"
+    String cron_string = "H/5 * * * *"
     def scm = "${isStartedByTimer()}"
 
     pipeline {
         agent any
         parameters {
-            string(name: 'GIT_REV', defaultValue: '', description: 'The git commit you want to build')
-            string(name: 'EKS_CLUSTER', defaultValue: 'qa_nclouds', description: 'The name of the eks cluster')
-            string(name: 'AWS_REGION', defaultValue: 'us-west-2')
-            choice(name: 'OPTION', choices: ['test', 'build', 'add-artifacts', 'deploy', 're-deploy', 'new1'])
+            string(name: 'EKS_PROD_CLUSTER', defaultValue: 'nclouds-eks-prod', description: 'The name of the eks prod cluster')
+            string(name: 'EKS_DEV_CLUSTER', defaultValue: 'nclouds-eks-dev', description: 'The name of the eks cluster')
+            string(name: 'AWS_REGION', defaultValue: 'us-east-1')
+            string(name: 'ECR_REPO', defaultValue: '695292474035.dkr.ecr.us-east-1.amazonaws.com/nclouds-eks-nodejs')
+            string(name: 'DEPLOYMENT_NAME', defaultValue: 'ecsdemo-nodejs')
+            string(name: 'DOCKER_TAG_NAME', defaultValue: 'nclouds-eks-nodejs')
+            choice(name: 'OPTION', choices: ['test', 'build', 'add-artifacts', 'deploy', 're-deploy'])
         }
 
 
         options {
             disableConcurrentBuilds()
         }
-//        triggers {
-//            pollSCM(cron_string)
-//        }
+        triggers {
+            pollSCM(cron_string)
+        }
 
         stages {
 
@@ -48,7 +51,6 @@ def call(){
                     script {
                         echo "Hello Wordld"
                         echo "${scm}"
-                        echo "${EKS_CLUSTER}"
                     }
                 }
             }
@@ -67,7 +69,8 @@ def call(){
                     }
                 }
                 steps {
-                    sh 'echo "Stage build done"'
+	            sh "docker build -t ${DOCKER_TAG_NAME} --network=host ."
+                sh 'echo "Stage build done"'
                 }
             }
 
@@ -106,6 +109,11 @@ def call(){
                 }
             }
 
+	        stage('Vulnerability Scanner') {
+                steps {
+                    sh 'echo "Vulnerability Scanning done"'
+                }
+            }
 
             stage('push') {
                 when {
@@ -140,6 +148,11 @@ def call(){
                 }
 
                 steps {
+                    sh "\$(aws ecr get-login --no-include-email --region ${AWS_REGION})"	
+                    sh "docker tag ${DOCKER_TAG_NAME} ${ECR_REPO}:${commit}"	
+                    sh "docker tag ${DOCKER_TAG_NAME} ${ECR_REPO}:latest"	
+                    sh "docker push ${ECR_REPO}:${commit}"	
+                    sh "docker push ${ECR_REPO}:latest"
                     sh 'echo "Stage push done"'
                 }
             }
@@ -163,7 +176,7 @@ def call(){
 
 
 
-            stage('deploy') {
+            stage('deploy-dev') {
                 when {
                     allOf {
                         not {
@@ -185,8 +198,14 @@ def call(){
 
                 }
                 steps {
-                    sh 'echo "Stage deploy done"'
                     // error('failed')
+                    container('docker') {	
+                        script {	
+                            sh "aws eks update-kubeconfig --name ${EKS_DEV_CLUSTER} --region ${AWS_REGION}"	
+                            sh "kubectl set image deployment/${DEPLOYMENT_NAME} ${DEPLOYMENT_NAME}=${ECR_REPO}:${commit} --record"
+                            sh 'echo "Stage deploy done"'	
+                        }	
+                    }
                 }
 
                 post {
@@ -197,7 +216,7 @@ def call(){
                 
             }
 
-            stage('re-deploy'){
+            stage('re-deploy-dev'){
                 when {
                     expression {
                         params.OPTION == "re-deploy"
@@ -216,6 +235,60 @@ def call(){
                 }
             }
 
+            node{
+                def userInput = true
+                stage('Check for deployment'){
+                    when {
+                        allOf {
+                            not {
+                                expression {
+                                    params.OPTION == "re-deploy"
+                                }
+                            }
+                        
+                            anyOf {
+                                expression {
+                                    "${scm}" == "true"
+                                }
+                                expression {
+                                    params.OPTION == "deploy"
+                                }
+                            }
+                        }
+
+
+                    }
+                    steps {
+                        def IsTimeout = false
+                        script{
+                            try {
+                                timeout(time: 300, unit: 'SECONDS') {
+                                    userInput = input(
+                                    id: 'userInput', message: 'Deploy to Prod?', parameters: [
+                                        [$class: 'BooleanParameterDefinition', defaultValue: true, description: 'Deploy to Production?', name: 'PROD']
+                                    ]);
+                                }
+                            } 
+                            catch(err) { // timeout reached or input false
+                                userInput = false
+                            }
+
+                            if (userInput == true) {
+                                stage('Prod Deployment') {
+
+                                    container('docker') {
+                                        script {
+                                            sh "echo deploying to prod..."
+                                            sh "aws eks update-kubeconfig --name ${EKS_PROD_CLUSTER} --region ${AWS_REGION}"
+                                            sh "kubectl set image deployment/${DEPLOYMENT_NAME} ${DEPLOYMENT_NAME}=${ECR_REPO}:${commit} --record"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             
         }
     }
