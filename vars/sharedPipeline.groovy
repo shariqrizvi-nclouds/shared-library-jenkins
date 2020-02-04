@@ -56,26 +56,6 @@ def call(){
                 }
             }
 
-            stage('build') {
-                when {
-                    allOf {
-                        not {
-                            expression {
-                                params.OPTION == "re-deploy"
-                            }
-                        }
-                        expression {
-                            params.GIT_REV == ""
-                        }
-                    }
-                }
-                steps {
-	            sh "docker build -t ${DOCKER_TAG_NAME} --network=host ."
-                sh 'echo "Stage build done"'
-                }
-            }
-
-
             stage('test') {
                 when {
                     allOf {
@@ -141,6 +121,7 @@ def call(){
                 steps {
                     container('docker') {	
                         script {	
+                            sh "docker build -t ${DOCKER_TAG_NAME} --network=host ."
                             sh "\$(aws ecr get-login --no-include-email --region ${AWS_REGION})"	
                             sh "docker tag ${DOCKER_TAG_NAME} ${ECR_REPO}:${commit}"
                             sh "docker push ${ECR_REPO}:${commit}"
