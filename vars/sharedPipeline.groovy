@@ -178,7 +178,7 @@ def call(){
                                         sh "kubectl set image deployment/${DEPLOYMENT_NAME} ${DEPLOYMENT_NAME}=${ECR_REPO}:${commit} --record"
                                     }
                                 }
-                                sendSlackNotification()
+                                //sendSlackNotification()
                             }
                         }
                     }
