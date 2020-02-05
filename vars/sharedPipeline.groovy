@@ -69,16 +69,6 @@ def call(){
             }
 
             stage('Build') {
-                when {
-                    anyOf {
-                        expression {
-                            "${scm}" == "true"
-                        }
-                        expression {
-                            params.OPTION == "deploy"
-                        }
-                    }
-                }
                 steps {
                     container('docker') {	
                         script {	
