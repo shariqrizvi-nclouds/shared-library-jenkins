@@ -11,6 +11,18 @@ def isStartedByTimer() {
 	return isStartedByTimer
 }
 
+def sendSlackNotification(){
+    message="Layer2 Testing Jenkins Job"
+
+    header="{ 'type': 'section', 'text': { 'type': 'mrkdwn', 'text': '$message' } }"
+    divider="{ 'type': 'divider' }"
+
+    data="{ 'blocks': [ $header, $divider ] }"
+
+    echo "$data"
+
+    sh "curl -X POST -H 'Content-type: application/json' --data '{\"text\":\"Jenkins Job Notification Layer2 Test\"}' https://hooks.slack.com/services/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"
+}
 
 def call(){
     String cron_string = "* * * * *"
@@ -174,20 +186,9 @@ def call(){
                                         sh "echo deploying to prod..."
                                         sh "aws eks update-kubeconfig --name ${EKS_PROD_CLUSTER} --region ${AWS_REGION}"
                                         sh "kubectl set image deployment/${DEPLOYMENT_NAME} ${DEPLOYMENT_NAME}=${ECR_REPO}:${commit} --record"
-                                        
-                                        
-                                        message="Layer2 Testing Jenkins Job"
-
-                                        header="{ 'type': 'section', 'text': { 'type': 'mrkdwn', 'text': '$message' } }"
-                                        divider="{ 'type': 'divider' }"
-
-                                        data="{ 'blocks': [ $header, $divider ] }"
-
-                                        echo "$data"
-
-                                        sh "curl -X POST -H 'Content-type: application/json' --data 'Layer2 Testing Jenkins Job' https://hooks.slack.com/services/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"
                                     }
                                 }
+                                sendSlackNotification()
                             }
                         }
                     }
