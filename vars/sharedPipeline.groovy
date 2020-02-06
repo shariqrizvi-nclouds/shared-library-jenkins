@@ -32,6 +32,7 @@ def call(Map pipelineParams){
     pipeline {
         agent any
         parameters {
+            string(name: 'GIT_REV', defaultValue: 'latest', description: 'The git commit you want to build (Keep \'latest\' value for latest commit)')
             choice(name: 'OPTION', choices: ['prod-deploy','dev-deploy', 'test', 'build'])
         }
         options {
@@ -44,6 +45,11 @@ def call(Map pipelineParams){
         stages {
 
             stage('Checkout') {
+                when {
+                    expression {
+                            params.GIT_REV == "latest"
+                    }
+                }
                 steps {
                     script {
                         commit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
@@ -52,6 +58,11 @@ def call(Map pipelineParams){
             }
 
             stage('Linting'){
+                when {
+                    expression {
+                            params.GIT_REV == "latest"
+                    }
+                }
                 steps {
                     script {
                         echo 'Linting Docker image with Hadolint...'
@@ -61,6 +72,11 @@ def call(Map pipelineParams){
             }
 
             stage('Build') {
+                when {
+                    expression {
+                            params.GIT_REV == "latest"
+                    }
+                }
                 steps {
                     container('docker') {	
                         script {	
@@ -77,6 +93,11 @@ def call(Map pipelineParams){
             }
 
             stage('Vulnerability Scanner') {
+                when {
+                    expression {
+                            params.GIT_REV == "latest"
+                    }
+                }
                 steps {
                     container('docker') {	
                         script {
@@ -91,15 +112,20 @@ def call(Map pipelineParams){
 
             stage('Test') {
                 when {
-                    anyOf {
+                    allOf {
                         expression {
-                            params.OPTION == "test"
+                            params.GIT_REV == "latest"
                         }
-                        expression {
-                            params.OPTION == "dev-deploy"
-                        }
-                        expression {
-                            params.OPTION == "prod-deploy"
+                        anyOf {
+                            expression {
+                                params.OPTION == "test"
+                            }
+                            expression {
+                                params.OPTION == "dev-deploy"
+                            }
+                            expression {
+                                params.OPTION == "prod-deploy"
+                            }
                         }
                     }
                 }
@@ -123,8 +149,13 @@ def call(Map pipelineParams){
                     // error('failed')
                     container('docker') {	
                         script {	
-                            sh "aws eks update-kubeconfig --name ${pipelineParams.EKS_DEV_CLUSTER} --region ${pipelineParams.AWS_REGION}"	
-                            sh "kubectl set image deployment/${pipelineParams.DEPLOYMENT_NAME} ${pipelineParams.DEPLOYMENT_NAME}=${pipelineParams.ECR_REPO}:${commit} --record"
+                            sh "aws eks update-kubeconfig --name ${pipelineParams.EKS_DEV_CLUSTER} --region ${pipelineParams.AWS_REGION}"
+                            if (params.GIT_REV == "latest") {	
+                                sh "kubectl set image deployment/${pipelineParams.DEPLOYMENT_NAME} ${pipelineParams.DEPLOYMENT_NAME}=${pipelineParams.ECR_REPO}:${commit} --record"
+                            }
+                            else {
+                                sh "kubectl set image deployment/${pipelineParams.DEPLOYMENT_NAME} ${pipelineParams.DEPLOYMENT_NAME}=${pipelineParams.ECR_REPO}:${params.GIT_REV} --record"
+                            }
                             sh 'echo "Stage deploy done"'	
                         }	
                     }
@@ -167,7 +198,12 @@ def call(Map pipelineParams){
                                     script {
                                         sh "echo deploying to prod..."
                                         sh "aws eks update-kubeconfig --name ${pipelineParams.EKS_PROD_CLUSTER} --region ${pipelineParams.AWS_REGION}"
-                                        sh "kubectl set image deployment/${pipelineParams.DEPLOYMENT_NAME} ${pipelineParams.DEPLOYMENT_NAME}=${pipelineParams.ECR_REPO}:${commit} --record"
+                                        if (params.GIT_REV == "latest") {	
+                                            sh "kubectl set image deployment/${pipelineParams.DEPLOYMENT_NAME} ${pipelineParams.DEPLOYMENT_NAME}=${pipelineParams.ECR_REPO}:${commit} --record"
+                                        }
+                                        else {
+                                            sh "kubectl set image deployment/${pipelineParams.DEPLOYMENT_NAME} ${pipelineParams.DEPLOYMENT_NAME}=${pipelineParams.ECR_REPO}:${params.GIT_REV} --record"
+                                        }
                                     }
                                 }
                                 //sendSlackNotification()
