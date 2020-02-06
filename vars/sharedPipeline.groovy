@@ -21,26 +21,16 @@ def sendSlackNotification(){
 
     echo "$data"
 
-    sh "curl -X POST -H 'Content-type: application/json' --data '{\"text\":\"Jenkins Job Notification Layer2 Test\"}' https://hooks.slack.com/services/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"
+    sh "curl -X POST -H 'Content-type: application/json' --data '{\"text\":\"Jenkins Job Notification Layer2 Test\"}' https://hooks.slack.com/services/token_id"
 }
 
-def call(){
+def call(Map pipelineParams){
     String cron_string = "* * * * *"
     def scm = "${isStartedByTimer()}"
     commit = ""
 
     pipeline {
         agent any
-        parameters {
-            string(name: 'EKS_PROD_CLUSTER', description: 'The name of the eks prod cluster')
-            string(name: 'EKS_DEV_CLUSTER', description: 'The name of the eks dev cluster')
-            string(name: 'AWS_REGION', description: 'region to be deployed')
-            string(name: 'ECR_REPO', description: 'Full ECR repo base image uri')
-            string(name: 'ECR_REPO_NAME', description: 'ECR repo name')
-            string(name: 'DEPLOYMENT_NAME', description: 'Deployment name in Kubernetes Deployment File')
-            choice(name: 'OPTION', choices: ['build', 'test', 'dev-deploy', 'prod-deploy'])
-        }
-
 
         options {
             disableConcurrentBuilds()
@@ -72,12 +62,12 @@ def call(){
                 steps {
                     container('docker') {	
                         script {	
-                            sh "docker build -t ${ECR_REPO_NAME} --network=host ."
-                            sh "\$(aws ecr get-login --no-include-email --region ${AWS_REGION})"	
-                            sh "docker tag ${ECR_REPO_NAME} ${ECR_REPO}:${commit}"
-                            sh "docker tag ${ECR_REPO_NAME} ${ECR_REPO}:latest"
-                            sh "docker push ${ECR_REPO}:${commit}"
-                            sh "docker push ${ECR_REPO}:latest"
+                            sh "docker build -t ${pipelineParams.ECR_REPO_NAME} --network=host ."
+                            sh "\$(aws ecr get-login --no-include-email --region ${pipelineParams.AWS_REGION})"	
+                            sh "docker tag ${pipelineParams.ECR_REPO_NAME} ${pipelineParams.ECR_REPO}:${commit}"
+                            sh "docker tag ${pipelineParams.ECR_REPO_NAME} ${pipelineParams.ECR_REPO}:latest"
+                            sh "docker push ${pipelineParams.ECR_REPO}:${commit}"
+                            sh "docker push ${pipelineParams.ECR_REPO}:latest"
                             sh 'echo "Stage push done"'
                         }
                     }
@@ -89,9 +79,9 @@ def call(){
                     container('docker') {	
                         script {
                             echo "Startin image vulneratbility scan on ECR"
-                            sh "aws ecr start-image-scan --repository-name ${ECR_REPO_NAME} --image-id imageTag=${commit} --region ${AWS_REGION}|| true"
-                            sh "aws ecr wait image-scan-complete --repository-name ${ECR_REPO_NAME} --image-id imageTag=${commit} --region ${AWS_REGION}"
-                            sh "aws ecr describe-image-scan-findings --repository-name ${ECR_REPO_NAME} --image-id imageTag=${commit} --region ${AWS_REGION}"
+                            sh "aws ecr start-image-scan --repository-name ${pipelineParams.ECR_REPO_NAME} --image-id imageTag=${commit} --region ${pipelineParams.AWS_REGION}|| true"
+                            sh "aws ecr wait image-scan-complete --repository-name ${pipelineParams.ECR_REPO_NAME} --image-id imageTag=${commit} --region ${pipelineParams.AWS_REGION}"
+                            sh "aws ecr describe-image-scan-findings --repository-name ${pipelineParams.ECR_REPO_NAME} --image-id imageTag=${commit} --region ${pipelineParams.AWS_REGION}"
                         }
                     }
                 }
@@ -131,8 +121,8 @@ def call(){
                     // error('failed')
                     container('docker') {	
                         script {	
-                            sh "aws eks update-kubeconfig --name ${EKS_DEV_CLUSTER} --region ${AWS_REGION}"	
-                            sh "kubectl set image deployment/${DEPLOYMENT_NAME} ${DEPLOYMENT_NAME}=${ECR_REPO}:${commit} --record"
+                            sh "aws eks update-kubeconfig --name ${pipelineParams.EKS_DEV_CLUSTER} --region ${pipelineParams.AWS_REGION}"	
+                            sh "kubectl set image deployment/${pipelineParams.DEPLOYMENT_NAME} ${pipelineParams.DEPLOYMENT_NAME}=${pipelineParams.ECR_REPO}:${commit} --record"
                             sh 'echo "Stage deploy done"'	
                         }	
                     }
@@ -174,8 +164,8 @@ def call(){
                                 container('docker') {
                                     script {
                                         sh "echo deploying to prod..."
-                                        sh "aws eks update-kubeconfig --name ${EKS_PROD_CLUSTER} --region ${AWS_REGION}"
-                                        sh "kubectl set image deployment/${DEPLOYMENT_NAME} ${DEPLOYMENT_NAME}=${ECR_REPO}:${commit} --record"
+                                        sh "aws eks update-kubeconfig --name ${pipelineParams.EKS_PROD_CLUSTER} --region ${pipelineParams.AWS_REGION}"
+                                        sh "kubectl set image deployment/${pipelineParams.DEPLOYMENT_NAME} ${pipelineParams.DEPLOYMENT_NAME}=${pipelineParams.ECR_REPO}:${commit} --record"
                                     }
                                 }
                                 //sendSlackNotification()
