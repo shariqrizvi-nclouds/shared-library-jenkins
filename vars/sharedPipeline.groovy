@@ -32,7 +32,7 @@ def call(Map pipelineParams){
     pipeline {
         agent any
         parameters {
-            choice(name: 'OPTION', choices: ['build', 'test', 'dev-deploy', 'prod-deploy'])
+            choice(name: 'OPTION', choices: ['prod-deploy','dev-deploy', 'test', 'build'])
         }
         options {
             disableConcurrentBuilds()
