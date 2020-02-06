@@ -31,7 +31,9 @@ def call(Map pipelineParams){
 
     pipeline {
         agent any
-
+        parameters {
+            choice(name: 'OPTION', choices: ['build', 'test', 'dev-deploy', 'prod-deploy'])
+        }
         options {
             disableConcurrentBuilds()
         }
@@ -91,13 +93,13 @@ def call(Map pipelineParams){
                 when {
                     anyOf {
                         expression {
-                            pipelineParams.OPTION == "test"
+                            params.OPTION == "test"
                         }
                         expression {
-                            pipelineParams.OPTION == "dev-deploy"
+                            params.OPTION == "dev-deploy"
                         }
                         expression {
-                            pipelineParams.OPTION == "prod-deploy"
+                            params.OPTION == "prod-deploy"
                         }
                     }
                 }
@@ -110,10 +112,10 @@ def call(Map pipelineParams){
                 when {
                     anyOf {
                         expression {
-                            pipelineParams.OPTION == "dev-deploy"
+                            params.OPTION == "dev-deploy"
                         }
                         expression {
-                            pipelineParams.OPTION == "prod-deploy"
+                            params.OPTION == "prod-deploy"
                         }
                     }
                 }
@@ -139,7 +141,7 @@ def call(Map pipelineParams){
             stage('Approval'){
                 when {
                     expression {
-                        pipelineParams.OPTION == "prod-deploy"
+                        params.OPTION == "prod-deploy"
                     }
                 }
                 steps {
