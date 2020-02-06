@@ -91,13 +91,13 @@ def call(Map pipelineParams){
                 when {
                     anyOf {
                         expression {
-                            params.OPTION == "test"
+                            pipelineParams.OPTION == "test"
                         }
                         expression {
-                            params.OPTION == "dev-deploy"
+                            pipelineParams.OPTION == "dev-deploy"
                         }
                         expression {
-                            params.OPTION == "prod-deploy"
+                            pipelineParams.OPTION == "prod-deploy"
                         }
                     }
                 }
@@ -110,10 +110,10 @@ def call(Map pipelineParams){
                 when {
                     anyOf {
                         expression {
-                            params.OPTION == "dev-deploy"
+                            pipelineParams.OPTION == "dev-deploy"
                         }
                         expression {
-                            params.OPTION == "prod-deploy"
+                            pipelineParams.OPTION == "prod-deploy"
                         }
                     }
                 }
@@ -139,7 +139,7 @@ def call(Map pipelineParams){
             stage('Approval'){
                 when {
                     expression {
-                        params.OPTION == "prod-deploy"
+                        pipelineParams.OPTION == "prod-deploy"
                     }
                 }
                 steps {
