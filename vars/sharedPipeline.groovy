@@ -28,8 +28,9 @@ def call(Map pipelineParams){
     String cron_string = "* * * * *"
     def scm = "${isStartedByTimer()}"
     commit = ""
-
+    commit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
     pipeline {
+
         agent any
         parameters {
             string(name: 'GIT_REV', defaultValue: 'latest', description: 'The git commit you want to build (Keep \'latest\' value for latest commit)')
@@ -44,18 +45,18 @@ def call(Map pipelineParams){
 
         stages {
 
-            stage('Checkout') {
-                when {
-                    expression {
-                            params.GIT_REV == "latest"
-                    }
-                }
-                steps {
-                    script {
-                        commit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
-                    }
-                }
-            }
+            //stage('Checkout') {
+            //    when {
+            //        expression {
+            //                params.GIT_REV == "latest"
+            //        }
+            //    }
+            //    steps {
+            //        script {
+            //            commit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
+            //        }
+            //    }
+            //}
 
             stage('Linting'){
                 when {
@@ -167,6 +168,22 @@ def call(Map pipelineParams){
                     }
                 }
                 
+            }
+
+            stage('Live Tests') {
+                when {
+                    anyOf {
+                        expression {
+                            params.OPTION == "dev-deploy"
+                        }
+                        expression {
+                            params.OPTION == "prod-deploy"
+                        }
+                    }
+                }
+                steps {
+                    sh 'echo "Live test done"'
+                }
             }
 
             stage('Approval'){
