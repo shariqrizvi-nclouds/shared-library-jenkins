@@ -80,7 +80,7 @@ def call(Map pipelineParams){
                 }
             }
 
-            stage('Vulnerability Scanner') {
+            stage('ECR Vulnerability Scanner') {
                 when {
                     expression {
                             params.GIT_REV == "latest"
