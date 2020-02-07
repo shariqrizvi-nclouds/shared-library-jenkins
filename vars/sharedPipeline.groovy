@@ -44,19 +44,6 @@ def call(Map pipelineParams){
 
         stages {
 
-            stage('Checkout') {
-                when {
-                    expression {
-                            params.GIT_REV == "latest"
-                    }
-                }
-                steps {
-                    script {
-                        commit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
-                    }
-                }
-            }
-
             stage('Linting'){
                 when {
                     expression {
@@ -65,6 +52,7 @@ def call(Map pipelineParams){
                 }
                 steps {
                     script {
+                        commit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
                         echo 'Linting Docker image with Hadolint...'
                         // sh 'docker run --rm -i hadolint/hadolint hadolint - < Dockerfile'
                     }
