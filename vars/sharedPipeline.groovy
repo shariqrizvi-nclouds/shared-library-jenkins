@@ -28,7 +28,6 @@ def call(Map pipelineParams){
     String cron_string = "* * * * *"
     def scm = "${isStartedByTimer()}"
     commit = ""
-    commit = "${sh(returnStdout: true, script: 'git rev-parse HEAD').trim()}"
     pipeline {
 
         agent any
@@ -44,6 +43,19 @@ def call(Map pipelineParams){
         }
 
         stages {
+
+            stage('Checkout') {
+                when {
+                    expression {
+                            params.GIT_REV == "latest"
+                    }
+                }
+                steps {
+                    script {
+                        commit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
+                    }
+                }
+            }
 
             stage('Linting'){
                 when {
