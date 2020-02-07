@@ -54,7 +54,7 @@ def call(Map pipelineParams){
                     script {
                         commit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
                         echo 'Linting Docker image with Hadolint...'
-                        // sh 'docker run --rm -i hadolint/hadolint hadolint - < Dockerfile'
+                        sh 'docker run --rm -i hadolint/hadolint hadolint - < Dockerfile'
                     }
                 }
             }
